@@ -29,13 +29,13 @@ import javax.jms.*;
 public class ProduceTest {
 
     public static void main(String[] args) throws JMSException {
-        ConnectionFactory factory = new ActiveMQConnectionFactory("tcp://192.168.0.21:61616");
+        ConnectionFactory factory = new ActiveMQConnectionFactory("tcp://127.0.0.1:61616");
         Connection connection = factory.createConnection();
         connection.start();
         Session session = connection.createSession(Boolean.TRUE, Session.AUTO_ACKNOWLEDGE);
         Destination destination = session.createQueue("my-queue");
         MessageProducer messageProducer = session.createProducer(destination);
-        for(int i=0;i<3;i++){
+        for(int i=0;i<10;i++){
             TextMessage message = session.createTextMessage("message--" + i);
             messageProducer.send(message);
         }

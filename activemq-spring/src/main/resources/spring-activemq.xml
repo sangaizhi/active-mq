@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:amq="http://activemq.apache.org/schema/core"
+       xmlns:jms="http://www.springframework.org/schema/jms"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://www.springframework.org/schema/jms
+        http://www.springframework.org/schema/jms/spring-jms-4.0.xsd
+        http://activemq.apache.org/schema/core
+        http://activemq.apache.org/schema/core/activemq-core-5.8.0.xsd">
+
+    <!-- ActiveMQ 连接工厂，真正可以产生Connection的ConnectionFactory, 由对应的JMS服务商提供-->
+    <amq:connectionFactory id="targetConnectionFactory" brokerURL="tcp://127.0.0.1:61616" userName="admin" password="admin"/>
+
+    <!-- spring Caching 连接工厂，Spring 用于管理真正的ConnectionFactory的ConnectionFactory  -->
+    <!--<bean id="connectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory">
+        &lt;!&ndash; 目标ConnectionFactory对应真实的可以产生JMS Connection 的 ConnectionFactory &ndash;&gt;
+        <property name="targetConnectionFactory" ref="targetConnectionFactory"></property>
+        &lt;!&ndash; session缓存数量 &ndash;&gt;
+        <property name="sessionCacheSize" value="100"/>
+    </bean>-->
+    <bean id="pooledConnectionFactory" class="org.apache.activemq.jms.pool.PooledConnectionFactory">
+        <property name="connectionFactory" ref="targetConnectionFactory"/>
+        <property name="maxConnections" value="100"/>
+    </bean>
+    <bean id="connectionFactory" class="org.springframework.jms.connection.SingleConnectionFactory">
+        <property name="targetConnectionFactory" ref="pooledConnectionFactory"/>
+    </bean>
+
+    <!-- 定义JmsTemplate的Queue类型 -->
+    <bean id="jmsQueueTemplate" class="org.springframework.jms.core.JmsTemplate">
+        <!-- connectionFactory 对应的是我们定义的spring提供的ConnectionFactory -->
+        <constructor-arg ref="connectionFactory"/>
+        <!-- 非pub/sub模型，即队列模式 -->
+        <property name="pubSubDomain" value="false"/>
+    </bean>
+
+    <!-- 定义JmsTemplate的Topic模型 -->
+    <bean id="jsmTopicTemplate" class="org.springframework.jms.core.JmsTemplate">
+        <constructor-arg ref="connectionFactory"/>
+        <property name="pubSubDomain" value="true"/>
+    </bean>
+
+    <!-- 定义Queue的监听器 -->
+    <jms:listener-container destination-type="queue" container-type="default" connection-factory="connectionFactory" acknowledge="auto">
+        <jms:listener destination="test.queue" ref="queueReceiver1"></jms:listener>
+        <jms:listener destination="test.queue" ref="queueReceiver2"></jms:listener>
+    </jms:listener-container>
+
+    <!-- 定义Topic监听器 -->
+    <jms:listener-container destination-type="topic" container-type="default" connection-factory="connectionFactory" acknowledge="auto">
+        <jms:listener destination="test.topic" ref="topicReceiver1"/>
+        <jms:listener destination="test.topic" ref="topicReceiver2"/>
+    </jms:listener-container>
+
+</beans>
